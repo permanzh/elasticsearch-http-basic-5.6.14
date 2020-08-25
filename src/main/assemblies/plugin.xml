@@ -1,0 +1,56 @@
+<?xml version="1.0"?>
+<assembly>
+    <id>release</id>
+    <formats>
+        <format>zip</format>
+    </formats>
+    <includeBaseDirectory>false</includeBaseDirectory>
+
+    <!--<files>
+        <file>
+            <source>target/classes/plugin-descriptor.properties</source>
+            <outputDirectory>${file.separator}</outputDirectory>
+        </file>
+        <file>
+            <source>target/classes/config.properties</source>
+            <outputDirectory>${file.separator}</outputDirectory>
+        </file>
+    </files>-->
+
+    <fileSets>
+        <fileSet>
+            <directory>src${file.separator}main${file.separator}resources</directory>
+            <outputDirectory>${file.separator}</outputDirectory>
+            <includes>
+                <include>plugin-descriptor.properties</include>
+                <include>config.properties</include>
+            </includes>
+            <filtered>true</filtered>
+        </fileSet>
+    </fileSets>
+
+    <dependencySets>
+        <dependencySet>
+            <outputDirectory>${file.separator}</outputDirectory>
+            <useProjectArtifact>true</useProjectArtifact>
+
+            <scope>runtime</scope>
+            <!--<useTransitiveFiltering>true</useTransitiveFiltering> -->
+            <includes>
+                <include>com.asquera.elasticsearch:elasticsearch-http-basic</include>
+                <include>org.hamcrest:hamcrest-all</include>
+                <include>org.apache.lucene:lucene-test-framework</include>
+                <include>com.carrotsearch.randomizedtesting:randomizedtesting-runner</include>
+                <include>org.apache.lucene:lucene-codecs</include>
+
+                <include>commons-io:commons-io</include>
+                <include>com.alibaba:fastjson</include>
+                <include>org.apache.commons:commons-lang3</include>
+                <include>org.apache.commons:commons-collections4</include>
+
+                <include>com.asquera.elasticsearch:elasticsearch-http-basic</include>
+
+            </includes>
+        </dependencySet>
+    </dependencySets>
+</assembly>
