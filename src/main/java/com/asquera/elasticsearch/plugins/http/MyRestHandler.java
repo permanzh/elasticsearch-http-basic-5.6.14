@@ -5,16 +5,12 @@ import com.asquera.elasticsearch.plugins.http.auth.InetAddressWhitelist;
 import com.asquera.elasticsearch.plugins.http.auth.ProxyChains;
 import com.asquera.elasticsearch.plugins.http.auth.XForwardedFor;
 import com.asquera.elasticsearch.plugins.http.common.Base64;
-import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Logger;
 import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.common.Booleans;
 import org.elasticsearch.common.Strings;
-import org.elasticsearch.common.inject.Inject;
-import org.elasticsearch.common.logging.DeprecationLogger;
 import org.elasticsearch.common.logging.Loggers;
-import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.settings.SettingsException;
 import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestChannel;
@@ -22,13 +18,9 @@ import org.elasticsearch.rest.RestHandler;
 import org.elasticsearch.rest.RestRequest;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
 import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static org.elasticsearch.rest.RestStatus.OK;
 import static org.elasticsearch.rest.RestStatus.UNAUTHORIZED;
@@ -269,11 +261,11 @@ public class MyRestHandler implements RestHandler {
                 request.method(),
                 request.header("Host"),
                 request.path(),
-                xForwardHeader,
-                request.header(xForwardHeader),
-                addr,
-                request.header("Client-IP"),
-                request.header("X-Client-IP"));
+                StringUtils.defaultIfBlank(xForwardHeader,""),
+                StringUtils.defaultIfBlank(request.header(xForwardHeader),""),
+                StringUtils.defaultIfBlank(addr,""),
+                StringUtils.defaultIfBlank(request.header("Client-IP"),""),
+                StringUtils.defaultIfBlank(request.header("X-Client-IP"),""));
     }
 
     private void logUnAuthorizedRequest(final RestRequest request) {

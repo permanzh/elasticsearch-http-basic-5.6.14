@@ -64,6 +64,7 @@ public class Client {
     trusted = checkTrusted();
     whitelisted = checkWhitelisted();
     authorized = trusted && whitelisted;
+    logger.info("Client(), trusted:{}, whitelisted:{}, authorized:{}",trusted,whitelisted,authorized);
   }
 
   /**
@@ -105,6 +106,7 @@ public class Client {
     if (xForwardedFor.isSet()) {
       trusted = trustedProxyChains.trusts(requestChain());
     }
+    logger.info("Client checkTrusted, xForwardedFor.isSet():{} ,trusted:{}",xForwardedFor.isSet(),trusted);
     return trusted;
   }
 
@@ -122,6 +124,7 @@ public class Client {
   private boolean checkWhitelisted() {
     boolean whitelisted = false;
 
+    logger.info("xForwardedFor.isSet(): {}, whitelist: {}, remoteClientIp():{} ",xForwardedFor.isSet(),StringUtils.join(whitelist.getStringWhitelist().toArray(new String[0]),","),remoteClientIp());
     if (xForwardedFor.isSet()) {
       whitelisted = whitelist.contains(remoteClientIp());
     } else {
@@ -154,6 +157,7 @@ public class Client {
     List<String> ipsChain = new ArrayList<String>();
     ipsChain.addAll(xForwardedFor.proxies());
     ipsChain.add(requestIp.getHostAddress());
+    logger.info("Client requestChain, xForwardedFor.proxies():{} , requestIp.getHostAddress():{}",StringUtils.join(xForwardedFor.proxies().toArray(new String[0]),","),requestIp.getHostAddress());
     return new ProxyChain(ipsChain);
   }
 
@@ -183,6 +187,7 @@ public class Client {
         clientIp = proxies.get(proxies.size() - 1);
       }
     }
+    logger.info("Client remoteClientIp, clientIp:{}",clientIp);
     return clientIp;
   }
 

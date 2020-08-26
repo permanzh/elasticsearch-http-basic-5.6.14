@@ -1,5 +1,8 @@
 package com.asquera.elasticsearch.plugins.http.auth;
 
+import org.apache.logging.log4j.Logger;
+import org.elasticsearch.common.logging.Loggers;
+
 import java.util.*;
 
 /**
@@ -9,6 +12,8 @@ import java.util.*;
  **/
 
 public class ProxyChains {
+
+  private final Logger logger = Loggers.getLogger(getClass());
 
   private Set<ProxyChain> proxyChains;
 
@@ -47,6 +52,7 @@ public class ProxyChains {
     if (!sub.isEmpty()) {
       trusted = Collections.max(sub, new InetAddressChainComparator()); 
     }
+    logger.info("Client trustedSubchain, sub.isEmpty():{} , trusted:{}", sub.isEmpty(),trusted);
     return trusted;
   }
 
@@ -56,7 +62,8 @@ public class ProxyChains {
   class InetAddressChainComparator implements Comparator<ProxyChain> {
     @Override
     public int compare(ProxyChain a, ProxyChain b) {
-      return a.size() < b.size() ? -1 : a.size() == b.size() ? 0 : 1;
+      return Integer.compare(a.size(),b.size());
+//      return a.size() < b.size() ? -1 : a.size() == b.size() ? 0 : 1;
     }
   }
 
