@@ -34,8 +34,9 @@ public class MyRestHandler implements RestHandler {
     private final InetAddressWhitelist whitelist;
     private final ProxyChains proxyChains;
     private final String xForwardHeader;
-    private final boolean log;
+    public static boolean log = false;
     private final boolean authorization;
+    public static String logLevel;
 
     private final Logger logger ;
 
@@ -47,21 +48,25 @@ public class MyRestHandler implements RestHandler {
     MyRestHandler(RestHandler restHandler,Properties prop) {
         this.restHandler = restHandler;
         this.logger = Loggers.getLogger(getClass());
+        this.logLevel = removeQuote(prop.getProperty("http.basic.loglevel","debug"),"\"");
+
+        Loggers.setLevel(this.logger,this.logLevel);
 
         this.user = removeQuote(prop.getProperty("http.basic.user","admin"),"\"");
         this.password = removeQuote(prop.getProperty("http.basic.password", "admin_pw"),"\"");
 
         this.authorization = getAsBoolean(prop,"http.basic.authorization",false);
-
+        this.log = getAsBoolean(prop,"http.basic.log", true);
         final boolean whitelistEnabled = StringUtils.isNotBlank(prop.getProperty("http.basic.ipwhitelist"));
         String [] whitelisted = new String[0];
         if (whitelistEnabled) {
             whitelisted = getAsArray(prop,"http.basic.ipwhitelist", new String[]{"localhost", "127.0.0.1"},true);
 
             this.WHITE_LIST_CONTAIN_LOCAL = Arrays.asList(whitelisted).stream().anyMatch(item -> LOCLA_HOST_LIST.contains(item));
-            logger.info("WHITE_LIST_CONTAIN_LOCAL : " + WHITE_LIST_CONTAIN_LOCAL);
-
-            logger.info("http.basic.ipwhitelist : "+StringUtils.join(whitelisted,","));
+            if (logger.isDebugEnabled()) {
+                logger.debug("WHITE_LIST_CONTAIN_LOCAL : " + WHITE_LIST_CONTAIN_LOCAL);
+                logger.debug("http.basic.ipwhitelist : " + StringUtils.join(whitelisted, ","));
+            }
         }
         this.whitelist = new InetAddressWhitelist(whitelisted);
         this.proxyChains = new ProxyChains(
@@ -69,48 +74,53 @@ public class MyRestHandler implements RestHandler {
 
         // for AWS load balancers it is X-Forwarded-For -> hmmh does not work
         this.xForwardHeader = prop.getProperty("http.basic.xforward", "");
-        this.log = getAsBoolean(prop,"http.basic.log", true);
 
         Iterator<Object> iterator = prop.keySet().iterator();
-        logger.info("------------------------------------------------------ config start --------------------------------------------------------");
-        while (iterator.hasNext()){
-            Object next = iterator.next();
-            String key = String.valueOf(next);
-            if (StringUtils.startsWith(key,"http.basic")
-                    || StringUtils.startsWith(key,"http.cors")) {
-                logger.info(key + "\t" + prop.get(key));
-            }
-        }
-        logger.info("------------------------------------------------------ config end  --------------------------------------------------------");
 
-        logger.info("using {}:{} with whitelist: {}, xforward header field: {}, trusted proxy chain: {}",
-                user, password, whitelist, xForwardHeader, proxyChains);
+        if (logger.isDebugEnabled()) {
+            logger.debug("------------------------------------------------------ config start --------------------------------------------------------");
+            while (iterator.hasNext()) {
+                Object next = iterator.next();
+                String key = String.valueOf(next);
+                if (StringUtils.startsWith(key, "http.basic")
+                        || StringUtils.startsWith(key, "http.cors")) {
+                    logger.debug(key + "\t" + prop.get(key));
+                }
+            }
+            logger.debug("------------------------------------------------------ config end  --------------------------------------------------------");
+
+            logger.debug("using {}:{} with whitelist: {}, xforward header field: {}, trusted proxy chain: {}",
+                    user, password, whitelist, xForwardHeader, proxyChains);
+        }
     }
 
     @Override
     public void handleRequest(RestRequest request, RestChannel channel,
                               NodeClient client) throws Exception {
         //request.params().put("UUID", UUID.randomUUID().toString());
-        logger.info("request.params() : "+request.params());
-        Map<String, List<String>> headers = request.getHeaders();
-        logger.info("------------------------------------------------------ request header start --------------------------------------------------------");
-        for (Map.Entry<String,List<String>> entry : headers.entrySet()){
-            logger.info(entry.getKey() +"\t" + StringUtils.join(entry.getValue(),","));
+        if (logger.isDebugEnabled()) {
+            logger.debug("request.params() : " + request.params());
+            Map<String, List<String>> headers = request.getHeaders();
+            logger.debug("------------------------------------------------------ request header start --------------------------------------------------------");
+            for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
+                logger.debug(entry.getKey() + "\t" + StringUtils.join(entry.getValue(), ","));
+            }
+            logger.debug("------------------------------------------------------ request header end --------------------------------------------------------");
+
+            logger.debug("request.getHeaders() : " + headers);
+            logger.debug("request.getRemoteAddress() : " + request.getRemoteAddress().toString());
+            logger.debug("request.getLocalAddress() : " + request.getLocalAddress().toString());
+            InetAddress address = getAddress(request);
+            logger.debug("request getAddress " + address.toString());
+
+            logger.debug("log : " + log);
+
+            logger.debug("request : " + request.toString());
         }
-        logger.info("------------------------------------------------------ request header end --------------------------------------------------------");
-
-        logger.info("request.getHeaders() : "+ headers);
-        logger.info("request.getRemoteAddress() : "+request.getRemoteAddress().toString());
-        logger.info("request.getLocalAddress() : "+request.getLocalAddress().toString());
-        InetAddress address = getAddress(request);
-        logger.info("request getAddress " + address.toString());
-
-        logger.info("log : " + log);
-
-        logger.info("request : " + request.toString());
         if (log) {
             logRequest(request);
         }
+
 
         if (authorized(request)) {
             logger.info("---------------------- authorized(request) ---------------------------");
@@ -119,7 +129,7 @@ public class MyRestHandler implements RestHandler {
             logger.info("---------------------- healthCheck(request) ---------------------------");
             channel.sendResponse(new BytesRestResponse(OK, "{\"OK\":{}}"));
         } else {
-            logger.info("---------------------- logUnAuthorizedRequest(request) ---------------------------");
+           logger.info("---------------------- logUnAuthorizedRequest(request) ---------------------------");
             logUnAuthorizedRequest(request);
             BytesRestResponse response = new BytesRestResponse(UNAUTHORIZED, "Authentication Required");
             response.addHeader("WWW-Authenticate", "Basic realm=\"Restricted\"");
@@ -130,14 +140,18 @@ public class MyRestHandler implements RestHandler {
     // @param an http method
     // @returns True iff the method is one of the methods used for health check
     private boolean isHealthCheckMethod(final RestRequest.Method method){
-        logger.info("isHealthCheckMethod method : " + method.name());
+        if (logger.isDebugEnabled()) {
+            logger.debug("isHealthCheckMethod method : " + method.name());
+        }
         return Arrays.asList(healthCheckMethods).contains(method);
     }
 
     // @param an http Request
     // @returns True iff we check the root path and is a method allowed for healthCheck
     private boolean healthCheck(final RestRequest request) {
-        logger.info("healthCheck request.path() : " + request.path());
+        if (logger.isDebugEnabled()) {
+            logger.debug("healthCheck request.path() : " + request.path());
+        }
         return request.path().equals("/") && isHealthCheckMethod(request.method());
     }
 
@@ -161,29 +175,37 @@ public class MyRestHandler implements RestHandler {
     private boolean ipAuthorized(final RestRequest request) {
         boolean ipAuthorized = false;
         String xForwardedFor = request.header(xForwardHeader);
-        logger.info("ipAuthorized xForwardedFor : " + xForwardedFor);
+        if (logger.isDebugEnabled()) {
+            logger.debug("ipAuthorized xForwardedFor : " + xForwardedFor);
+        }
         Client client = new Client(getAddress(request),
                 whitelist,
                 new XForwardedFor(xForwardedFor),
                 proxyChains);
-        logger.info("ipAuthorized client : " + client.toString());
         ipAuthorized = client.isAuthorized();
-        logger.info("ipAuthorized ipAuthorized : " + ipAuthorized);
-        if (ipAuthorized && authorization) {
+        if (logger.isDebugEnabled()) {
+            logger.debug("ipAuthorized client : " + client.toString());
+            logger.debug("ipAuthorized ipAuthorized : " + ipAuthorized);
+        }
+        if (ipAuthorized) {
             if (log) {
                 String template = "Ip Authorized client: {}";
                 logger.info(template, client);
             }
         } else {
-            String template = "Ip Unauthorized client: {}";
-            logger.error(template, client);
+            if (log) {
+                String template = "Ip Unauthorized client: {}";
+                logger.error(template, client);
+            }
         }
         return ipAuthorized;
     }
 
     private String getDecoded(RestRequest request) {
         String authHeader = request.header("Authorization");
-        logger.info("getDecoded authHeader Authorization : " + authHeader);
+        if (logger.isDebugEnabled()) {
+            logger.debug("getDecoded authHeader Authorization : " + authHeader);
+        }
         if (authHeader == null)
             return "";
 
@@ -192,7 +214,9 @@ public class MyRestHandler implements RestHandler {
             return "";
         try {
             String base64decode = new String(Base64.decode(split[1]));
-            logger.info("getDecoded base64decode ->  " + base64decode);
+            if (logger.isDebugEnabled()) {
+                logger.debug("getDecoded base64decode ->  " + base64decode);
+            }
             return base64decode;
         } catch (IOException ex) {
             throw new RuntimeException(ex);
@@ -202,13 +226,17 @@ public class MyRestHandler implements RestHandler {
     private boolean authBasic(final RestRequest request) {
 
         if (!authorization){
-            logger.info("AuthBasic is not permitted ! ");
+            if (log) {
+                logger.info("AuthBasic is not permitted ! ");
+            }
             return false;
         }
         String decoded = "";
         try {
             decoded = getDecoded(request);
-            logger.info("authBasic decoded : " + decoded);
+            if (logger.isDebugEnabled()) {
+                logger.debug("authBasic decoded : " + decoded);
+            }
             if (!decoded.isEmpty()) {
                 String[] userAndPassword = decoded.split(":", 2);
                 String givenUser = userAndPassword[0];
@@ -242,7 +270,9 @@ public class MyRestHandler implements RestHandler {
         // in elasticsearch.yml set
         // http.cors.allow-headers:
         // "X-Requested-With, Content-Type, Content-Length, Authorization"
-        logger.info("allowOptionsForCORS : " + request.method().name());
+        if (logger.isDebugEnabled()) {
+            logger.debug("allowOptionsForCORS : " + request.method().name());
+        }
 
         if (request.method() == RestRequest.Method.OPTIONS) {
             logger.error("CORS type {}, address {}, path {}, request {}, content {}",

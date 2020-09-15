@@ -5,10 +5,8 @@ import org.apache.logging.log4j.Logger;
 import org.elasticsearch.common.logging.Loggers;
 
 import java.net.InetAddress;
-import java.util.Arrays;
 import java.util.List;
 import java.util.ArrayList;
-import java.util.Set;
 
 /**
  * This class is responsible for determining the ip of the
@@ -30,7 +28,7 @@ public class Client {
   private final InetAddressWhitelist whitelist;
   private final XForwardedFor xForwardedFor;
   private final ProxyChains trustedProxyChains;
-    private final Logger logger ;
+  private final Logger logger ;
  /**
  *  the trusted state of the client. A client is trusted if it is connected
  *  directly or if it is connected via a trusted ip chain.
@@ -57,6 +55,7 @@ public class Client {
       XForwardedFor xForwardedFor, ProxyChains trustedProxyChains)
   {
       this.logger = Loggers.getLogger(getClass());
+      Loggers.setLevel(this.logger,MyRestHandler.logLevel);
     this.requestIp = requestIp;
     this.whitelist = whitelist;
     this.xForwardedFor = xForwardedFor;
@@ -64,7 +63,9 @@ public class Client {
     trusted = checkTrusted();
     whitelisted = checkWhitelisted();
     authorized = trusted && whitelisted;
-    logger.info("Client(), trusted:{}, whitelisted:{}, authorized:{}",trusted,whitelisted,authorized);
+    if (logger.isDebugEnabled()) {
+        logger.debug("Client(), trusted:{}, whitelisted:{}, authorized:{}", trusted, whitelisted, authorized);
+    }
   }
 
   /**
@@ -106,7 +107,9 @@ public class Client {
     if (xForwardedFor.isSet()) {
       trusted = trustedProxyChains.trusts(requestChain());
     }
-    logger.info("Client checkTrusted, xForwardedFor.isSet():{} ,trusted:{}",xForwardedFor.isSet(),trusted);
+    if (logger.isDebugEnabled()) {
+        logger.debug("Client checkTrusted, xForwardedFor.isSet():{} ,trusted:{}", xForwardedFor.isSet(), trusted);
+    }
     return trusted;
   }
 
@@ -124,7 +127,9 @@ public class Client {
   private boolean checkWhitelisted() {
     boolean whitelisted = false;
 
-    logger.info("xForwardedFor.isSet(): {}, whitelist: {}, remoteClientIp():{} ",xForwardedFor.isSet(),StringUtils.join(whitelist.getStringWhitelist().toArray(new String[0]),","),remoteClientIp());
+    if (logger.isDebugEnabled()) {
+        logger.info("xForwardedFor.isSet(): {}, whitelist: {}, remoteClientIp():{} ", xForwardedFor.isSet(), StringUtils.join(whitelist.getStringWhitelist().toArray(new String[0]), ","), remoteClientIp());
+    }
     if (xForwardedFor.isSet()) {
       whitelisted = whitelist.contains(remoteClientIp());
     } else {
@@ -134,10 +139,11 @@ public class Client {
       }
     }
 
-    logger.info("Client checkWhitelisted , whitelist : "+StringUtils.join(whitelist.getStringWhitelist().toArray(new String[0]),","));
-    logger.info("Client checkWhitelisted , requestIp.getHostAddress(): " + requestIp.getHostAddress());
-    logger.info("Client checkWhitelisted , requestIp.toString() : " + requestIp.toString());
-
+    if (logger.isDebugEnabled()) {
+        logger.debug("Client checkWhitelisted , whitelist : " + StringUtils.join(whitelist.getStringWhitelist().toArray(new String[0]), ","));
+        logger.debug("Client checkWhitelisted , requestIp.getHostAddress(): " + requestIp.getHostAddress());
+        logger.debug("Client checkWhitelisted , requestIp.toString() : " + requestIp.toString());
+    }
 
       return whitelisted;
   }
@@ -157,7 +163,9 @@ public class Client {
     List<String> ipsChain = new ArrayList<String>();
     ipsChain.addAll(xForwardedFor.proxies());
     ipsChain.add(requestIp.getHostAddress());
-    logger.info("Client requestChain, xForwardedFor.proxies():{} , requestIp.getHostAddress():{}",StringUtils.join(xForwardedFor.proxies().toArray(new String[0]),","),requestIp.getHostAddress());
+    if (logger.isDebugEnabled()) {
+        logger.info("Client requestChain, xForwardedFor.proxies():{} , requestIp.getHostAddress():{}", StringUtils.join(xForwardedFor.proxies().toArray(new String[0]), ","), requestIp.getHostAddress());
+    }
     return new ProxyChain(ipsChain);
   }
 
@@ -187,7 +195,9 @@ public class Client {
         clientIp = proxies.get(proxies.size() - 1);
       }
     }
-    logger.info("Client remoteClientIp, clientIp:{}",clientIp);
+    if (logger.isDebugEnabled()) {
+        logger.info("Client remoteClientIp, clientIp:{}", clientIp);
+    }
     return clientIp;
   }
 

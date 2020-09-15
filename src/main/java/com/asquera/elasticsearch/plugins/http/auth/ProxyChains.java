@@ -1,5 +1,6 @@
 package com.asquera.elasticsearch.plugins.http.auth;
 
+import com.asquera.elasticsearch.plugins.http.MyRestHandler;
 import org.apache.logging.log4j.Logger;
 import org.elasticsearch.common.logging.Loggers;
 
@@ -52,7 +53,10 @@ public class ProxyChains {
     if (!sub.isEmpty()) {
       trusted = Collections.max(sub, new InetAddressChainComparator()); 
     }
-    logger.info("Client trustedSubchain, sub.isEmpty():{} , trusted:{}", sub.isEmpty(),trusted);
+    Loggers.setLevel(logger, MyRestHandler.logLevel);
+    if (logger.isDebugEnabled()) {
+       logger.debug("Client trustedSubchain, sub.isEmpty():{} , trusted:{}", sub.isEmpty(),trusted);
+    }
     return trusted;
   }
 
