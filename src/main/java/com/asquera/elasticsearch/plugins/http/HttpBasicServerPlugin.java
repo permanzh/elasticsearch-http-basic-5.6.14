@@ -25,6 +25,7 @@ import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.script.ScriptService;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.watcher.ResourceWatcherService;
+import static com.asquera.elasticsearch.plugins.http.util.CommonUtils.*;
 
 import java.io.*;
 import java.text.SimpleDateFormat;
@@ -54,19 +55,16 @@ public class HttpBasicServerPlugin extends Plugin implements ActionPlugin{
 
     public Properties prop;
 
-
     @Inject
     public HttpBasicServerPlugin(Settings settings) {
         super();
         this.settings = settings;
         this.logger = Loggers.getLogger(getClass(), settings);
-        this.logger.info(actionName + " start ......");
 
 
+        String path = "";
         try {
-            String path = getPath() + File.separator + "config.properties";
-            logger.info("path : -> " + path);
-
+            path = getPath() + File.separator + "config.properties";
             File configFile = new File(path);
             if (configFile.exists()) {
                 Properties configPro = new Properties();
@@ -75,11 +73,20 @@ public class HttpBasicServerPlugin extends Plugin implements ActionPlugin{
             } else {
                 throw new FileNotFoundException("Elasticsearch Http Basic config.properties not exist ! ");
             }
-        }catch (Exception ex){
-            logger.error("Get Elasticsearch Http Basic config.properties error",ex);
+        } catch (Exception ex) {
+            logger.error("Get Elasticsearch Http Basic config.properties error", ex);
         }
-
-        this.enabled = Booleans.parseBooleanExact(prop.getProperty("http.basic.enabled"),false);
+        try {
+            this.enabled = Booleans.parseBooleanExact(prop.getProperty("http.basic.enabled"), false);
+            if (enabled) {
+                Loggers.setLevel(this.logger, removeQuote(prop.getProperty("http.basic.loglevel", "debug"), "\""));
+                this.logger.info(actionName + " start ......");
+                logger.info("path : -> " + path);
+            }
+        }catch (Exception ex){
+            this.enabled = false;
+            logger.error("Get Elasticsearch Http Basic config.properties error", ex);
+        }
     }
 
     /**
@@ -127,7 +134,9 @@ public class HttpBasicServerPlugin extends Plugin implements ActionPlugin{
                 Object key = iterator.next();
                 Object value = prop.get(key);
                 if (StringUtils.startsWith(String.valueOf(key),"http.basic")){
-                    logger.info(String.valueOf(key) +"\t" + String.valueOf(value));
+                    if (logger.isDebugEnabled()) {
+                        logger.debug(String.valueOf(key) + "\t" + String.valueOf(value));
+                    }
                     switch (String.valueOf(key)){
                         case HTTP_BASIC_ENABLED:
                             settingList.add(Setting.boolSetting(HTTP_BASIC_ENABLED,true, Setting.Property.NodeScope,Setting.Property.Shared));

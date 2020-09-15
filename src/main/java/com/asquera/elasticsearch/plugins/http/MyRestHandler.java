@@ -8,14 +8,12 @@ import com.asquera.elasticsearch.plugins.http.common.Base64;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Logger;
 import org.elasticsearch.client.node.NodeClient;
-import org.elasticsearch.common.Booleans;
-import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.logging.Loggers;
-import org.elasticsearch.common.settings.SettingsException;
 import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestChannel;
 import org.elasticsearch.rest.RestHandler;
 import org.elasticsearch.rest.RestRequest;
+import static com.asquera.elasticsearch.plugins.http.util.CommonUtils.*;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -307,82 +305,6 @@ public class MyRestHandler implements RestHandler {
                 request.content().utf8ToString(), getDecoded(request));
     }
 
-    private String removeQuote(String str,String split){
-        if (StringUtils.isNotBlank(str)){
-            String start = StringUtils.removeStart(str, split);
-            if (StringUtils.isNotBlank(start)){
-                return StringUtils.removeEnd(start, split);
-            }
-            return start;
-        }
-        return str;
-    }
 
-    private Boolean getAsBoolean(Properties prop,String setting, Boolean defaultValue) {
-        String rawValue = prop.getProperty(setting);
-        if (StringUtils.isNotBlank(rawValue)){
-            try{
-                return Booleans.parseBooleanExact(rawValue, defaultValue);
-            }catch (Exception ex){
-                logger.error("Get ["+setting+"] Boolean Value Failed ",ex);
-                return false;
-            }
-        } else {
-            return false;
-        }
-    }
-
-    private String[] getAsArray(Properties prop,String settingPrefix, String[] defaultArray, Boolean commaDelimited) throws SettingsException {
-        List<String> result = new ArrayList<>();
-
-        final String valueFromPrefix = prop.getProperty(settingPrefix);
-        final String valueFromPreifx0 = prop.getProperty(settingPrefix + ".0");
-
-        if (valueFromPrefix != null && valueFromPreifx0 != null) {
-            final String message = String.format(
-                    Locale.ROOT,
-                    "settings object contains values for [%s=%s] and [%s=%s]",
-                    settingPrefix,
-                    valueFromPrefix,
-                    settingPrefix + ".0",
-                    valueFromPreifx0);
-            throw new IllegalStateException(message);
-        }
-
-        if (prop.get(settingPrefix) != null) {
-            if (commaDelimited) {
-                String[] strings = Strings.splitStringByCommaToArray(prop.getProperty(settingPrefix));
-                if (strings.length > 0) {
-                    for (String string : strings) {
-                        result.add(string.trim());
-                    }
-                }
-            } else {
-                result.add(prop.getProperty(settingPrefix).trim());
-            }
-        }
-
-        int counter = 0;
-        while (true) {
-            String value = prop.getProperty(settingPrefix + '.' + (counter++));
-            if (value == null) {
-                break;
-            }
-            result.add(value.trim());
-        }
-        if (result.isEmpty()) {
-            return defaultArray;
-        }
-
-        List<String> res  = new ArrayList<>();
-        for (String item : result) {
-            while (StringUtils.contains(item,"\"")){
-                item = StringUtils.substringBeforeLast(item,"\"");
-                item = StringUtils.substringAfterLast(item,"\"");
-            }
-            res.add(item);
-        }
-        return res.toArray(new String[res.size()]);
-    }
 
 }
